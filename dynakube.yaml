@@ -1,25 +1,25 @@
 # The template for this file is available on GitHub: https://github.com/Dynatrace/dynatrace-operator/blob/v0.14.2/assets/samples/classicFullStack.yaml
 apiVersion: v1
 data:
-  apiToken: ZHQwYzAxLk5QN1E0NEJaM1daUTdXVkpQTlRQV0QzQy5aNFM3N0FFMzIzVUtKNENBNUNVRlNXRTQzR0VHUk5XMzJMT1pJRUNZR0NNSzdUWUJUNkU2MkYzT05VTVBNUllS
-  dataIngestToken: ZHQwYzAxLkdVWFhLQUs1NVU2WUxJUTdESlEzVTNKMi42SlFPSFdWWjVWR0FCT1c3SldTMkRIWllDTEFBR09ZU0xVSDdXREJGM1RTUVo2NFBZVFNNTlhDNVBVWUFHVU1E
+  apiToken: ZHQwYzAxLkY2SUwyQTRHQ1ZBSlhUNFZNUFBKVlU3QS5OVVhUTTNBR1JIREVXSEdaQUpTN0M1NzVGVVE0M1RIRTNFMkJYUTJSWFhRNUVZTjdUQklTNlJPVEJCN0ZINVcy
+  dataIngestToken: ZHQwYzAxLktDNldIUzRSWDJZSTRHQzRWQVBZS1BEMy5SMlROWEoySFpQTTJOT1NRNEVGRkNaNk1PSzZGMkQ0UkJZMjdZTTZJM0w3NFNaTUVBU0dDMk4zM0JTVTVRSDVH
 kind: Secret
 metadata:
-  name: aksunguardsusan
+  name: azk8unguard
   namespace: dynatrace
 type: Opaque
 ---
 apiVersion: dynatrace.com/v1beta1
 kind: DynaKube
 metadata:
-  name: aksunguardsusan
+  name: azk8unguard
   namespace: dynatrace
 spec:
   # Dynatrace apiUrl including the `/api` path at the end.
   # For SaaS, set `ENVIRONMENTID` to your environment ID.
   # For Managed, change the apiUrl address.
   # For instructions on how to determine the environment ID and how to configure the apiUrl address, see https://www.dynatrace.com/support/help/reference/dynatrace-concepts/environment-id/.
-  apiUrl: https://kuw18273.live.dynatrace.com/api
+  apiUrl: https://tfh19986.sprint.dynatracelabs.com/api
 
   # Optional: Name of the secret holding the credentials required to connect to the Dynatrace tenant
   # If unset, the name of this custom resource is used
