@@ -21,20 +21,27 @@ import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Post {
+    private final String postId;
     private final String username;
     private final String body;
     private final Date timestamp;
     private final String imageUrl;
 
     public Post(
-			@JsonProperty("username") String username,
-			@JsonProperty("body") String body,
-			@JsonProperty("imageUrl") String imageUrl,
-			@JsonProperty("timestamp") Date timestamp) {
+        @JsonProperty("postId") String postId,
+        @JsonProperty("username") String username,
+        @JsonProperty("body") String body,
+        @JsonProperty("imageUrl") String imageUrl,
+        @JsonProperty("timestamp") Date timestamp) {
+        this.postId = postId;
         this.username = username;
         this.body = body;
         this.imageUrl = imageUrl;
         this.timestamp = timestamp;
+    }
+
+    public String getPostId() {
+        return postId;
     }
 
     public String getUsername() {
@@ -45,11 +52,11 @@ public class Post {
         return body;
     }
 
-    public Date getTimestamp() {
-        return timestamp;
-    }
-
     public String getImageUrl() {
         return imageUrl;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
     }
 }

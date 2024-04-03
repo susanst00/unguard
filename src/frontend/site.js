@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-const {handleError, statusCodeForError} = require("./controller/errorHandler");
-const {getJwtUser, hasJwtRole, getJwtUserId} = require('./controller/cookie');
-const {roles} = require('./model/role');
-const {extendURL, extendRenderData} = require("./controller/utilities.js");
+const { handleError, statusCodeForError } = require("./controller/errorHandler");
+const { getJwtUser, hasJwtRole, getJwtUserId } = require('./controller/cookie');
+const { roles } = require('./model/role');
+const { extendURL, extendRenderData } = require("./controller/utilities.js");
 
 const adManagerRouter = require('./controller/adManager');
 
@@ -27,6 +27,8 @@ const router = express.Router();
 
 // Global Timeline route
 router.get('/', showGlobalTimeline);
+// Show users
+router.get('/users', showUsers);
 // Personalized Timeline (only works when logged in)
 router.get('/my-timeline', showPersonalTimeline);
 // User Profile route
@@ -36,7 +38,11 @@ router.post('/user/:username/follow', followUser);
 // Create post
 router.post('/post', createPost);
 // get single post
-router.get('/post/:postid', getPost);
+router.get('/post/:postId', getPost);
+// Like post
+router.get('/like', likePost);
+// Unlike post
+router.get('/unlike', unlikePost);
 // Logout
 router.post('/logout', doLogout);
 // Login
@@ -55,20 +61,58 @@ function showGlobalTimeline(req, res) {
     fetchUsingDeploymentBase(req, () =>
         Promise.all([
             req.MICROBLOG_API.get('/timeline'),
-            getMembership(req)
+            getMembershipOfLoggedInUser(req)
+        ])).
+        then(([timeline, membership]) => {
+            insertLikeCountIntoPostArray(req, timeline.data).then(postArray => {
+                let data = extendRenderData({
+                    data: postArray,
+                    title: 'Timeline',
+                    username: getJwtUser(req.cookies),
+                    isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
+                    baseData: baseRequestFactory.baseData,
+                    membership: membership.data.membership
+
+                }, req);
+                res.render('index.njk', data)
+            }, (err) => displayError(err, res))
+        }, (err) => displayError(err, res))
+}
+
+function showUsers(req, res) {
+    let params = {}
+    if (req.query.name) {
+        params.name = req.query.name
+    }
+    if(req.query.roles) {
+        params.roles = req.query.roles
+    }
+    fetchUsingDeploymentBase(req, () =>
+        Promise.all([
+            req.STATUS_SERVICE_API.get('/roles'),
+            req.STATUS_SERVICE_API.get('/users', {
+                params: params
+            }),
+            getMembershipOfLoggedInUser(req)
         ]))
-        .then(([timeline, membership]) => {
+        .then(([allRoles, users, membership]) => {
             let data = extendRenderData({
-                data: timeline.data,
-                title: 'Timeline',
+                data: users.data,
+                roles: allRoles.data,
+                title: 'Users',
+                searchTerm: req.query.name,
+                searchRoles: req.query.roles,
+                shouldRoleBeChecked: (role) => {
+                    return (typeof req.query.roles == "string" && req.query.roles == role.name) // only one checkbox checked
+                    || (typeof req.query.roles == "object" && req.query.roles.includes(role.name)) // multiple checkboxes checked
+                },
                 username: getJwtUser(req.cookies),
                 isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
                 baseData: baseRequestFactory.baseData,
                 membership: membership.data.membership
 
             }, req);
-
-            res.render('index.njk', data)
+            res.render('users.njk', data);
         }, (err) => displayError(err, res));
 }
 
@@ -76,65 +120,69 @@ function showPersonalTimeline(req, res) {
     fetchUsingDeploymentBase(req, () =>
         Promise.all([
             req.MICROBLOG_API.get('/mytimeline'),
-            getMembership(req)
+            getMembershipOfLoggedInUser(req)
         ]))
         .then(([myTimeline, membership]) => {
+            insertLikeCountIntoPostArray(req, myTimeline.data).then(postArray => {
+                let data = extendRenderData({
+                    data: postArray,
+                    title: 'My Timeline',
+                    username: getJwtUser(req.cookies),
+                    isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
+                    baseData: baseRequestFactory.baseData,
+                    membership: membership.data.membership
+                }, req);
+                res.render('index.njk', data);
+            }, (err) => displayError(err, res))
+        }, (err) => displayError(err, res))
+}
+
+function showUserProfile(req, res) {
+    const username = req.params.username;
+    fetchUsingDeploymentBase(req, () =>
+        Promise.all([
+            getBioText(req, username),
+            req.MICROBLOG_API.get(`/users/${username}/posts`),
+            getMembership(req, username)
+        ])
+    ).then(([bioText, microblogServiceResponse, membership]) => {
+        insertLikeCountIntoPostArray(req, microblogServiceResponse.data).then(postArray => {
             let data = extendRenderData({
-                data: myTimeline.data,
-                title: 'My Timeline',
+                data: postArray,
+                profileName: username,
                 username: getJwtUser(req.cookies),
                 isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
+                bio: bioText,
                 baseData: baseRequestFactory.baseData,
                 membership: membership.data.membership
             }, req);
 
-            res.render('index.njk', data);
-        }, (err) => displayError(err, res));
-}
-
-function showUserProfile(req, res) {
-    const usernameProfile = req.params.username;
-
-    fetchUsingDeploymentBase(req, () =>
-        Promise.all([
-            getBioText(req),
-            req.MICROBLOG_API.get(`/users/${usernameProfile}/posts`),
-            getMembership(req)
-        ])
-    ).then(([bioText, microblogServiceResponse, membership]) => {
-        let data = extendRenderData({
-            data: microblogServiceResponse.data,
-            profileName: usernameProfile,
-            username: getJwtUser(req.cookies),
-            isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
-            bio: bioText,
-            baseData: baseRequestFactory.baseData,
-            membership: membership.data.membership
-        }, req);
-
-        res.render('profile.njk', data);
+            res.render('profile.njk', data);
+        }, (err) => displayError(err, res))
     }, (err) => displayError(err, res));
 }
 
-function getBioText(req) {
-    return new Promise((resolve, reject) => {
-        req.PROFILE_SERVICE_API.get(`/user/${getJwtUserId(req.cookies)}/bio`)
-            .then((response) => {
-                resolve(response.data.bioText);
-            }).catch(reason => {
-            // If a bio for the userId doesn't exist yet and a status code 404 is returned, this catch block will set
-            // the bioText to an empty string which allows for the profile page to be displayed rather than the error page
-            if (statusCodeForError(reason) === 404) {
-                resolve("");
-            } else {
-                reject(reason)
-            }
-        })
+function getBioText(req, username) {
+    return getUserIdForName(req, username).then((userId) => {
+        return new Promise((resolve, reject) => {
+            req.PROFILE_SERVICE_API.get(`/user/${userId}/bio`)
+                .then((response) => {
+                    resolve(response.data.bioText);
+                }).catch(reason => {
+                // If a bio for the userId doesn't exist yet and a status code 404 is returned, this catch block will set
+                // the bioText to an empty string which allows for the profile page to be displayed rather than the error page
+                if (statusCodeForError(reason) === 404) {
+                    resolve("");
+                } else {
+                    reject(reason)
+                }
+            })
+        });
     });
 }
 
 function showMembership(req, res) {
-    fetchUsingDeploymentBase(req, () => getMembership(req))
+    fetchUsingDeploymentBase(req, () => getMembershipOfLoggedInUser(req))
         .then((membership) => {
             let data = extendRenderData({
                 title: 'Membership',
@@ -148,13 +196,27 @@ function showMembership(req, res) {
         }, (err) => displayError(err, res));
 }
 
-function getMembership(req) {
+function getMembershipOfLoggedInUser(req) {
     let jwtUserId = getJwtUserId(req.cookies);
     if (!jwtUserId) {
         return Promise.resolve();
     }
 
     return req.MEMBERSHIP_SERVICE_API.get(`/${jwtUserId}`);
+}
+
+function getMembership(req, username) {
+    return getUserIdForName(req, username).then((userId) => {
+        return req.MEMBERSHIP_SERVICE_API.get(`/${userId}`)
+    });
+}
+
+function getUserIdForName(req, username) {
+    return req.USER_AUTH_API.post('/user/useridForName', {
+        "jwt": req.cookies.jwt, "username": username
+    }).then((response) => {
+        return response.data.userId;
+    });
 }
 
 function doLogout(req, res) {
@@ -210,10 +272,10 @@ function registerUser(req, res) {
 }
 
 function followUser(req, res) {
-    const usernameProfile = req.params.username;
-    fetchUsingDeploymentBase(req, () => req.MICROBLOG_API.post(`/users/${usernameProfile}/follow`))
+    const username = req.params.username;
+    fetchUsingDeploymentBase(req, () => req.MICROBLOG_API.post(`/users/${username}/follow`))
         .then(_ => {
-            res.redirect(extendURL(`/user/${usernameProfile}`));
+            res.redirect(extendURL(`/user/${username}`));
         }, (err) => displayError(err, res));
 }
 
@@ -280,18 +342,34 @@ function createPost(req, res) {
 }
 
 function getPost(req, res) {
-    const postId = req.params.postid;
+    const postId = req.params.postId;
     fetchUsingDeploymentBase(req, () => req.MICROBLOG_API.get(`/post/${postId}`)).then((response) => {
+        insertLikeCountIntoPostArray(req, [response.data]).then(postArray => {
+            let postData = postArray[0];
+            let data = extendRenderData({
+                post: postData,
+                username: getJwtUser(req.cookies),
+                isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
+                baseData: baseRequestFactory.baseData
+            }, req);
 
-        let data = extendRenderData({
-            post: response.data,
-            username: getJwtUser(req.cookies),
-            isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
-            baseData: baseRequestFactory.baseData
-        }, req);
+            res.render('singlepost.njk', data);
+        }, (err) => displayError(err, res))
+    }, (err) => displayError(err, res))
+}
 
-        res.render('singlepost.njk', data);
-    }, (err) => displayError(err, res));
+function likePost(req, res) {
+    const postId = req.query.postId;
+    fetchUsingDeploymentBase(req, () => req.LIKE_SERVICE_API.post(`/like/` + postId)).then((response) => {
+        res.redirect(extendURL(`/post/${postId}`));
+    }, (error) => res.status(statusCodeForError(error)).render('error.njk', handleError(error)));
+}
+
+function unlikePost(req, res) {
+    const postId = req.query.postId;
+    fetchUsingDeploymentBase(req, () => req.LIKE_SERVICE_API.delete(`/like`, {params: {postId: postId}})).then((response) => {
+        res.redirect(extendURL(`/post/${postId}`));
+    }, (error) => res.status(statusCodeForError(error)).render('error.njk', handleError(error)));
 }
 
 function postMembership(req, res) {
@@ -313,11 +391,22 @@ function postBio(req, res) {
         .then((_) => {
             res.redirect(extendURL(`/user/${getJwtUser(req.cookies)}`));
         }).catch(error => {
-        res.status(statusCodeForError(error)).render('error.njk', handleError(error));
-    });
+            res.status(statusCodeForError(error)).render('error.njk', handleError(error));
+        });
 }
 
-/**
+function insertLikeCountIntoPostArray(req, posts) {
+    return fetchUsingDeploymentBase(req, () => req.LIKE_SERVICE_API.get(`/like`, { params: { postId: posts.map(post => post.postId) } }))
+        .then(likeResponse => likeResponse.data)
+        .then(likeData => posts.map(post => {
+            let likeCount = likeData.likeCounts.find(likeCount => likeCount.postId == post.postId)?.likeCount ?? 0;
+            let userLiked = likeData.likedPosts.some(like => like.postId == post.postId);
+            return {...post, likeCount: likeCount, userLiked: userLiked};
+    }));
+}
+
+
+/**-
  * Creates a new Promise and performs base request before the one specified, this is useful to match the synchronous nature of
  * nunjucks, allowing microservice failures to not affect base requests. e.g deployment service requests will always succeed
  * regardless if login fails.

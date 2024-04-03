@@ -149,6 +149,14 @@ export default () => {
         await browser.visit(config.frontendUrl + '/')
     })
 
+    step('Like post', async browser => {
+        await browser.visit(config.frontendUrl + '/')
+        const likeButton = await browser.maybeFindElement(By.css('input[type=hidden][name=postId] ~ button[type=submit]'))
+        await likeButton?.click();
+
+        console.log(`${user.username} liked a post: ${browser.getUrl()}`)
+    })
+
     step('Visit Timeline', async browser => {
         await browser.visit(config.frontendUrl + '/my-timeline')
     })
@@ -215,6 +223,18 @@ export default () => {
         await postButton.click()
 
         console.log(`${user.username} updated bio: '${bio.text}'`)
+    })
+
+    step('Visit Users page and search for admanager', async browser => {
+        await browser.visit(config.frontendUrl + '/users')
+
+        const searchBar = await browser.findElement(By.css('input[name=name]'))
+        await searchBar.type("admanager")
+
+        const searchButton = await browser.findElement(By.css('input[name=name] ~ button[type=submit]'))
+        await searchButton.click()
+
+        console.log(`${user.username} searched for admanager user.`)
     })
 
     step('Upgrade to PRO membership', async (browser, _) => {

