@@ -1,0 +1,70 @@
+            - name: KICS Github Action
+  # You may pin to the exact commit or the version.
+  # uses: Checkmarx/kics-github-action@d1b692d84c536f4e8696954ce7aab6818f95f5bc
+  uses: Checkmarx/kics-github-action@v2.0.0
+  with:
+    # The GITHUB_TOKEN for the current workflow run
+    token: # optional, default is ${{github.token}}
+    # Enable annotations report
+    enable_annotations: # optional, default is true
+    # Enable pull request report comments
+    enable_comments: # optional, default is false
+    # Enable report as jobs summary
+    enable_jobs_summary: # optional, default is false
+    # Add queries in th pull request report comments (available when enable_comments = true)
+    comments_with_queries: # optional, default is false
+    # Excluded columns for the comment with queries, accepts a comma separated list
+    excluded_column_for_comments_with_queries: # optional, default is description_id,similarity_id,search_line,search_value
+    # paths to a file or directories to scan, accepts a comma separated list
+    path: 
+    # defines which non-zero exit codes should be ignored (all, results, errors, none)
+    ignore_on_exit: # optional
+    # comma separated list of which severities returns exit code !=0
+    fail_on: # optional
+    # number of seconds the query has to execute before being canceled
+    timeout: # optional
+    # turns on profiler that prints resource consumption in the logs during the execution (CPU, MEM)
+    profiling: # optional
+    # path to configuration file
+    config_path: # optional
+    # case insensitive list of platform types to scan
+    platform_type: # optional
+    # exclude paths from scan, supports glob, quoted comma separated string example: './shouldNotScan/*,somefile.txt'
+    exclude_paths: # optional
+    # exclude queries by providing the query ID
+    exclude_queries: # optional
+    # exclude categories by providing its name, can be provided multiple times or as a comma separated string
+    exclude_categories: # optional
+    # exclude results by providing the similarity ID of a result
+    exclude_results: # optional
+    # exclude results by providing the severity of a result
+    exclude_severities: # optional
+    # disables the exclusion of paths specified within .gitignore file
+    exclude_gitignore: # optional
+    # formats in which the results report will be exported (json, sarif)
+    output_formats: # optional
+    # directory to store results report
+    output_path: # optional
+    # file path to store source internal representation in JSON format
+    payload_path: # optional
+    # path to directory with queries (default "./assets/queries")
+    queries: # optional
+    # path to secrets regex rules configuration file
+    secrets_regexes_path: # optional
+    # path to directory with Rego libraries
+    libraries_path: # optional
+    # disable request for full descriptions and use default vulnerability descriptions
+    disable_full_descriptions: # optional
+    # disable secrets detection
+    disable_secrets: # optional
+    # case insensitive comma-separated list of platform types to scan (Ansible, AzureResourceManager, CloudFormation, Dockerfile, Kubernetes, OpenAPI, Terraform)
+    type: # optional
+    # verbose scan
+    verbose: # optional
+    # comma separated list of queries ID's to include, cannot be provided with query exclusion flags
+    include_queries: # optional
+    # include bill of materials (BoM) in results output
+    bom: # optional
+    # list of cloud providers to scan (alicloud, aws, azure, gcp)
+    cloud_provider: # optional
+          
