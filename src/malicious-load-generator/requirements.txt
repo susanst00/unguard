@@ -33,7 +33,7 @@ geventhttpclient==1.5.3
     # via locust
 greenlet==3.0.0rc3
     # via gevent
-idna==3.3
+idna==3.7
     # via requests
 itsdangerous==2.1.2
     # via flask
