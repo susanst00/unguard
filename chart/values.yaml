@@ -38,7 +38,6 @@ mariaDB:
   serviceName: unguard-mariadb
   password: mariadb-root-password
 
-
 # Malicious load generator
 maliciousLoadGenerator:
   enabled: false
@@ -52,7 +51,7 @@ maliciousLoadGenerator:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-malicious-load-generator
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8083
@@ -81,6 +80,7 @@ profileService:
       ports:
         containerPort: 8080
       env:
+        OTEL_LOGS_EXPORTER: none
         OTEL_METRICS_EXPORTER: none
         OTEL_RESOURCE_ATTRIBUTES: service.name=unguard-profile-service
         OTEL_TRACES_EXPORTER: none
@@ -110,7 +110,7 @@ userSimulator:
       container:
         image:
           repository: ghcr.io/dynatrace-oss/unguard/unguard-user-simulator
-          tag: 0.9.1
+          tag: 0.9.3
           pullPolicy: IfNotPresent
 
         env:
@@ -141,7 +141,7 @@ membershipService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-membership-service
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8083
@@ -171,7 +171,7 @@ userAuthService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-user-auth-service
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 9091
@@ -206,7 +206,7 @@ adService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-ad-service
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8082
@@ -240,7 +240,7 @@ envoyProxy:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-envoy-proxy
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         - name: http
@@ -264,7 +264,7 @@ microblogService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-microblog-service
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8080
@@ -317,7 +317,7 @@ statusService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-status-service
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8083
@@ -372,7 +372,7 @@ proxyService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-proxy-service
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8081
@@ -399,7 +399,7 @@ likeService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-like-service
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8000
@@ -416,6 +416,36 @@ likeService:
             name: "{{ .Values.mariaDB.serviceName }}"
             key: "{{ .Values.mariaDB.password }}"
 
+# Payment Service
+paymentService:
+  name: payment-service
+
+  containerPort: 8084
+
+  service:
+    type: ClusterIP
+    ports:
+      port: 80
+
+  deployment:
+    strategy:
+      type: Recreate
+    container:
+      image:
+        repository: ghcr.io/dynatrace-oss/unguard/unguard-payment-service
+        tag: 0.9.3
+        pullPolicy: IfNotPresent
+      env:
+        API_PATH: /payment-service
+        OTEL_LOGS_EXPORTER: none
+        OTEL_METRICS_EXPORTER: none
+        OTEL_RESOURCE_ATTRIBUTES: service.name=unguard-payment-service
+        OTEL_TRACES_EXPORTER: none
+        OTEL_EXPERIMENTAL_SDK_ENABLED: false
+        OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger-collector:4318"
+        OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+        OTEL_PROPAGATORS: "jaeger"
+        OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: false
 
 # Frontend
 frontend:
@@ -433,7 +463,7 @@ frontend:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-frontend
-        tag: 0.9.1
+        tag: 0.9.3
         pullPolicy: IfNotPresent
       ports:
         containerPort: 3000
@@ -450,6 +480,7 @@ frontend:
         MEMBERSHIP_SERVICE_ADDRESS: unguard-membership-service
         PROFILE_SERVICE_ADDRESS: unguard-profile-service
         LIKE_SERVICE_ADDRES: unguard-like-service
+        PAYMENT_SERVICE_ADDRESS: unguard-payment-service
         FRONTEND_BASE_PATH: /ui
         AD_SERVICE_BASE_PATH: /ad-service
         LIKE_SERVICE_BASE_PATH: /like-service

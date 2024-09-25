@@ -1,5 +1,5 @@
 // <copyright company="Dynatrace LLC">
-// Copyright 2023 Dynatrace LLC
+// Copyright 2024 Dynatrace LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,14 +15,11 @@
 // </copyright>
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using MembershipService.Persistence;
+using MySql.Data.MySqlClient;
 
 namespace MembershipService
 {
@@ -30,36 +27,75 @@ namespace MembershipService
     {
         public static void Main(string[] args)
         {
-            var host = CreateHostBuilder(args).Build();
-            CreateDbIfNotExists(host);
-            host.Run();
-        }
-
-        private static void CreateDbIfNotExists(IHost host)
-        {
-            using (var scope = host.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                try
-                {
-                    var context = services.GetRequiredService<MariaDbContext>();
-                    DbInitializer.Initialize(context);
-                }
-                catch (Exception ex)
-                {
-                    var logger = services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(ex, "An error occurred creating the DB.");
-                    System.Environment.Exit(1);
-                }
-            }
+            CreateHostBuilder(args).Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                     webBuilder.UseStartup<Startup>();
-                     webBuilder.UseUrls("http://*:" + Environment.GetEnvironmentVariable("SERVER_PORT"));
+                    webBuilder.UseStartup<Startup>();
+                    webBuilder.UseUrls("http://*:" + Environment.GetEnvironmentVariable("SERVER_PORT"));
+                })
+                .ConfigureServices((hostContext, services) =>
+                {
+                    string dbPwd = Environment.GetEnvironmentVariable("MARIADB_PASSWORD");
+                    string dbHost = Environment.GetEnvironmentVariable("MARIADB_SERVICE");
+                    var connectionString = $"Server={dbHost};Port=3306;Database=memberships;user=root;password={dbPwd}";
+
+                    // Check if MariaDB exists, if not, create it
+                    using (var connection = new MySqlConnection(connectionString))
+                    {
+                        try
+                        {
+                            connection.Open();
+                        }
+                        catch (MySqlException)
+                        {
+                            // Database does not exist, create it
+                            CreateMariaDBDatabase(connectionString);
+                        }
+                    }
                 });
+
+        private static void CreateMariaDBDatabase(string connectionString)
+        {
+            var builder = new MySqlConnectionStringBuilder(connectionString);
+            string databaseName = builder.Database;
+
+            // Connection string without database name
+            builder.Database = string.Empty;
+            string masterConnectionString = builder.ConnectionString;
+
+            using (var masterConnection = new MySqlConnection(masterConnectionString))
+            {
+                masterConnection.Open();
+
+                // Create database
+                using (var command = masterConnection.CreateCommand())
+                {
+                    command.CommandText = $"CREATE DATABASE IF NOT EXISTS `{databaseName}`";
+                    command.ExecuteNonQuery();
+                }
+
+                // After creating the database, create the necessary table
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    // Create table
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS `membership` (
+                            `userid` VARCHAR(50) PRIMARY KEY,
+                            `membership` VARCHAR(100)
+                        )";
+                        command.ExecuteNonQuery();
+                    }
+                }
+
+            }
+        }
     }
 }

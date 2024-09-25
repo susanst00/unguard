@@ -15,7 +15,7 @@ docker run --detach --name memberships-db \
   --env MARIADB_PASSWORD=mariadb-root-password \
   --env MARIADB_DATABASE=memberships \
    -p 3306:3306 \
-   mariadb:latest
+   mariadb:10.6.12
 ```
 
 And then update the environment variables for the membership-service to fit:
@@ -63,13 +63,10 @@ docker run -it -p 80:8083 --name membership-service-container membership-service
 
 Returns the current membership of the requested user ID.
 
-#### POST /membership-service
+#### POST /membership-service/add/{userid}
 
-Insert or update the current membership of the user ID specified in the HTTP body:
+Update the user membership by providing it as simple form parameter to the post request:
 
-```json
-{
-    "userid": 234145,
-    "membership": "PRO"
-}
+```
+membership={membershipText}
 ```

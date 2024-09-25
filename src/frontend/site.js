@@ -24,6 +24,7 @@ const adManagerRouter = require('./controller/adManager');
 const cheerio = require('cheerio');
 const express = require('express');
 const router = express.Router();
+const querystring = require('querystring');
 
 // Global Timeline route
 router.get('/', showGlobalTimeline);
@@ -35,6 +36,9 @@ router.get('/my-timeline', showPersonalTimeline);
 router.get('/user/:username', showUserProfile);
 // Follow a user
 router.post('/user/:username/follow', followUser);
+// Payment method
+router.get('/user/:username/payment', showPaymentMethod);
+router.post('/user/:username/payment', postPaymentMethod);
 // Create post
 router.post('/post', createPost);
 // get single post
@@ -71,7 +75,7 @@ function showGlobalTimeline(req, res) {
                     username: getJwtUser(req.cookies),
                     isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
                     baseData: baseRequestFactory.baseData,
-                    membership: membership.data.membership
+                    membership: membership.data
 
                 }, req);
                 res.render('index.njk', data)
@@ -109,7 +113,7 @@ function showUsers(req, res) {
                 username: getJwtUser(req.cookies),
                 isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
                 baseData: baseRequestFactory.baseData,
-                membership: membership.data.membership
+                membership: membership.data
 
             }, req);
             res.render('users.njk', data);
@@ -130,7 +134,7 @@ function showPersonalTimeline(req, res) {
                     username: getJwtUser(req.cookies),
                     isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
                     baseData: baseRequestFactory.baseData,
-                    membership: membership.data.membership
+                    membership: membership.data
                 }, req);
                 res.render('index.njk', data);
             }, (err) => displayError(err, res))
@@ -154,12 +158,69 @@ function showUserProfile(req, res) {
                 isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
                 bio: bioText,
                 baseData: baseRequestFactory.baseData,
-                membership: membership.data.membership
+                membership: membership.data
             }, req);
 
             res.render('profile.njk', data);
         }, (err) => displayError(err, res))
     }, (err) => displayError(err, res));
+}
+
+function showPaymentMethod(req, res) {
+    const username = req.params.username;
+    fetchUsingDeploymentBase(req, () =>
+        Promise.all([
+            getCreditCardInfo(req),
+            getMembership(req, username)
+        ])
+    ).then(([paymentInformation, membership]) => {
+        let data = extendRenderData({
+            paymentInformation: paymentInformation,
+            profileName: username,
+            username: getJwtUser(req.cookies),
+            // isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
+            baseData: baseRequestFactory.baseData,
+            membership: membership.data
+        }, req);
+
+        res.render('payment.njk', data);
+    }, (err) => displayError(err, res));
+}
+
+function postPaymentMethod(req, res) {
+    req.PAYMENT_SERVICE_API.post(`/payment-info/${getJwtUserId(req.cookies)}`, {
+            cardHolderName: req.body.cardHolderName,
+            cardNumber: req.body.cardNumber,
+            expiryDate: req.body.expiryDate,
+            cvv: req.body.cvv
+        },
+        {
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        .then((_) => {
+            // redirect where the user came from
+            res.redirect('back');
+        }).catch(error => {
+        res.status(statusCodeForError(error)).render('error.njk', handleError(error));
+    });
+}
+
+function getCreditCardInfo(req) {
+    return new Promise((resolve, reject) => {
+        req.PAYMENT_SERVICE_API.get(`/payment-info/${getJwtUserId(req.cookies)}`)
+            .then((response) => {
+                resolve(response.data);
+            }).catch(reason => {
+
+            if (statusCodeForError(reason) === 404) {
+                resolve({});
+            } else {
+                reject(reason)
+            }
+        })
+    });
 }
 
 function getBioText(req, username) {
@@ -189,7 +250,7 @@ function showMembership(req, res) {
                 username: getJwtUser(req.cookies),
                 isAdManager: hasJwtRole(req.cookies, roles.AD_MANAGER),
                 baseData: baseRequestFactory.baseData,
-                membership: membership.data.membership
+                membership: membership.data
             }, req);
 
             res.render('membership.njk', data);
@@ -373,11 +434,28 @@ function unlikePost(req, res) {
 }
 
 function postMembership(req, res) {
-    const membership = {userid: getJwtUserId(req.cookies), membership: req.body.membershipText};
-    fetchUsingDeploymentBase(req, () => req.MEMBERSHIP_SERVICE_API.post('/', membership)).then((response) => {
-        res.redirect(extendURL(`/user/${getJwtUser(req.cookies)}`));
-    }, (error) => res.status(statusCodeForError(error)).render('error.njk', handleError(error)));
-
+    const formData = {
+        membership: req.body.membershipText,
+    };
+    fetchUsingDeploymentBase(req, () =>
+        req.MEMBERSHIP_SERVICE_API.post(
+            `/add/${getJwtUserId(req.cookies)}`,
+            querystring.stringify(formData),
+            {
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+            }
+        )
+    ).then(
+        (response) => {
+            res.redirect(extendURL(`/user/${getJwtUser(req.cookies)}`));
+        },
+        (error) =>
+            res
+                .status(statusCodeForError(error))
+                .render("error.njk", handleError(error))
+    );
 }
 
 function postBio(req, res) {

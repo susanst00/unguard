@@ -32,7 +32,7 @@ To install the chart with the release name `unguard` in a new namespace `unguard
     If you want to change this you also have to adopt the ```mariaDB.serviceName```value.
 
     ```sh
-    helm install unguard-mariadb bitnami/mariadb --set primary.persistence.enabled=false --wait --namespace unguard --create-namespace
+    helm install unguard-mariadb bitnami/mariadb --version 11.5.7 --set primary.persistence.enabled=false --wait --namespace unguard --create-namespace
     ```
 
     > **Note:** \
@@ -84,7 +84,7 @@ The command removes all the Kubernetes components associated with the chart and 
 To install Unguard in a specific version provide the `--version` flag with the version you want to install:
 
 ```sh
-helm install unguard  oci://ghcr.io/dynatrace-oss/unguard/chart/unguard --version 0.9.1
+helm install unguard  oci://ghcr.io/dynatrace-oss/unguard/chart/unguard --version 0.9.3
 ```
 
 ## Parameters
