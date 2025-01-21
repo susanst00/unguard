@@ -38,6 +38,10 @@ mariaDB:
   serviceName: unguard-mariadb
   password: mariadb-root-password
 
+labels:
+  # Add common labels to all resources here
+  common: {}
+
 # Malicious load generator
 maliciousLoadGenerator:
   enabled: false
@@ -51,7 +55,7 @@ maliciousLoadGenerator:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-malicious-load-generator
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8083
@@ -110,7 +114,7 @@ userSimulator:
       container:
         image:
           repository: ghcr.io/dynatrace-oss/unguard/unguard-user-simulator
-          tag: 0.9.3
+          tag: 0.9.4
           pullPolicy: IfNotPresent
 
         env:
@@ -141,7 +145,7 @@ membershipService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-membership-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8083
@@ -171,7 +175,7 @@ userAuthService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-user-auth-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 9091
@@ -206,7 +210,7 @@ adService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-ad-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8082
@@ -240,7 +244,7 @@ envoyProxy:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-envoy-proxy
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         - name: http
@@ -264,7 +268,7 @@ microblogService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-microblog-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8080
@@ -317,7 +321,7 @@ statusService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-status-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8083
@@ -372,7 +376,7 @@ proxyService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-proxy-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8081
@@ -399,7 +403,7 @@ likeService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-like-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 8000
@@ -411,6 +415,8 @@ likeService:
         SERVER_PORT: 8000
         API_PATH: /like-service
         USER_AUTH_SERVICE_ADDRESS: unguard-user-auth-service
+        DB_HOST: "{{ .Values.mariaDB.serviceName }}"
+        DB_PORT: "3306"
         MARIADB_PASSWORD:
           secretKeyRef:
             name: "{{ .Values.mariaDB.serviceName }}"
@@ -433,7 +439,7 @@ paymentService:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-payment-service
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       env:
         API_PATH: /payment-service
@@ -463,7 +469,7 @@ frontend:
     container:
       image:
         repository: ghcr.io/dynatrace-oss/unguard/unguard-frontend
-        tag: 0.9.3
+        tag: 0.9.4
         pullPolicy: IfNotPresent
       ports:
         containerPort: 3000
